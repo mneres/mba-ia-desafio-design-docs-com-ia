@@ -49,8 +49,14 @@ A sequência abaixo foi reconstruída a partir do histórico do git (`git log`) 
    O Tracker não aceita caminhos marcados como `(novo)` como fonte de código. Na iteração 1, resultado de 415 linhas, 99,0% de cobertura, 82,7% de linhas da transcrição e 72 de código, com 4 afirmações sem origem.
 7. **README por último.** Este README descreve o processo, então só podia ser escrito depois que todas as etapas anteriores existiam. O prompt `prompts/readme-generator.md` exige reconstruir a jornada a partir de evidências (git, prompts, relatórios) e não de um fluxo idealizado. A iteração 1 foi fechada no commit `8d5d7a3`.
 8. **Iteração 2: os mesmos prompts em modo de revisão.** Rodei de novo a cadeia completa (ADRs, RFC, FDD, PRD, Tracker e este README) sobre os documentos já existentes. Desta vez cada prompt entrou no ramo "documento com conteúdo": releitura integral, comparação com as fontes e com o que as etapas posteriores tinham descoberto, e correção no lugar, sem duplicar seções. Uma mudança num ADR foi propagada para o RFC, o FDD e o PRD na mesma rodada. O Tracker terminou com 425 linhas, 100% de cobertura, 81,6% de linhas da transcrição, 78 de código e nenhum item sem origem.
-9. **Iteração 3: teste de convergência.** Depois do commit da iteração 2 (`82d5b3c`), rodei a cadeia mais uma vez para verificar se os prompts convergiam, como exigem ("rodar de novo não deve mudar o que já está correto"). Nos ADRs a rodada terminou sem nenhuma alteração, confirmada de forma independente pelo Codex. Nos documentos seguintes, a releitura integral, que a iteração 2 não tinha feito porque só revisou os trechos afetados, achou poucos ajustes de precisão: 3 linhas no RFC, 4 trechos no FDD e 3 no PRD. O Tracker só teve dois resumos atualizados e continuou com 425 linhas e 100% de cobertura.
-10. **Revisão final** (`prompts/final-review.md`). É uma auditoria somente leitura, critério a critério, com veredito binário. Ela roda depois deste README, porque também avalia o README.
+9. **Iteração 3: teste de convergência.** Depois do commit da iteração 2 (`82d5b3c`), rodei a cadeia mais uma vez para verificar se os prompts convergiam, como exigem ("rodar de novo não deve mudar o que já está correto"). Nos ADRs a rodada terminou sem nenhuma alteração, confirmada de forma independente pelo Codex. Nos documentos seguintes, a releitura integral, que a iteração 2 não tinha feito porque só revisou os trechos afetados, achou poucos ajustes de precisão: 3 linhas no RFC, 4 trechos no FDD e 3 no PRD. O Tracker só teve dois resumos atualizados e continuou com 425 linhas e 100% de cobertura. A iteração foi fechada no commit `7cab128`. Em seguida rodei mais uma vez os prompts do RFC, do FDD e do PRD, e nenhum dos três alterou o documento: as fontes não tinham mudado desde a revisão anterior. Com isso o critério de convergência foi atingido em toda a cadeia.
+10. **Revisão final** (`prompts/final-review.md`). É uma auditoria somente leitura, critério a critério, com veredito binário, e roda depois do README porque também o avalia. Ela verificou os 36 critérios com evidência objetiva:
+    - contagens feitas por script;
+    - cada citação conferida contra a transcrição;
+    - existência de todos os 40 caminhos de código citados, com os 14 inexistentes marcados como novos;
+    - `git diff main` vazio para `src/`, `prisma/`, `tests/`, arquivos de configuração e `TRANSCRICAO.md`.
+
+    Resultado: 36 de 36 critérios aprovados, **REVISÃO APROVADA**. Ela não abriu novas falhas; os pontos que deixou para a revisão com o time já estavam registrados nos documentos como questões em aberto. Depois dela, este README foi atualizado mais uma vez para registrar o resultado.
 
 A ordem real seguiu a sugerida pelo enunciado. A dependência entre etapas é explícita nos prompts: quando um documento muda, os que dependem dele devem ser regenerados. Uma mudança em ADR, por exemplo, afeta RFC, FDD, PRD, Tracker e README.
 
@@ -111,9 +117,15 @@ O histórico do git não registra quantas versões cada prompt teve antes do com
 
 - **Iteração 1** (commit `8d5d7a3`): seis ciclos, um por prompt (ADRs, RFC, FDD, PRD, Tracker, README), cada um com geração, verificação mecânica e uma rodada de correções.
 - **Iteração 2** (commit `82d5b3c`): a mesma cadeia em modo de revisão, motivada pelas pendências que a iteração 1 deixou registradas.
-- **Iteração 3**: nova rodada para testar a convergência. Os ADRs não mudaram, com confirmação do Codex. Os outros documentos tiveram só ajustes de precisão, sem item novo nem item sem origem.
+- **Iteração 3** (commit `7cab128`): nova rodada para testar a convergência. Os ADRs não mudaram, com confirmação do Codex. Os outros documentos tiveram só ajustes de precisão, sem item novo nem item sem origem.
 
-A queda no volume de mudanças mostra a convergência: 2.104 linhas adicionadas no commit da iteração 1, 69 no da iteração 2 (ambos incluindo o README) e 18 nos documentos de `docs/` na iteração 3.
+A queda no volume de mudanças mostra a convergência:
+
+- 2.104 linhas adicionadas no commit da iteração 1 e 69 no da iteração 2, ambos incluindo o README;
+- 18 linhas nos documentos de `docs/` na iteração 3;
+- nenhuma alteração na rodada seguinte do RFC, do FDD e do PRD.
+
+A revisão final aprovou o pacote sem reprovar nenhum critério.
 
 Nenhum documento foi revertido. Os ajustes concretos foram estes:
 
