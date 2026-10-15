@@ -17,7 +17,7 @@ A dificuldade real não estava em escrever, e sim em não escrever demais. A tra
   - relatório final com hipóteses, lacunas e pendências.
 
   Esses relatórios foram a base da minha revisão antes de passar à etapa seguinte. As instruções permanentes do projeto ficam em `CLAUDE.md`, que o Claude Code carrega em toda sessão.
-- **Instruções para outros agentes.** O repositório também tem `AGENTS.md`, com o mesmo conteúdo de `CLAUDE.md`, para agentes como o Codex. Não há registro no repositório de que outro agente tenha gerado algum dos documentos entregues, por isso não o listo como ferramenta utilizada.
+- **Codex CLI (`codex exec`, modelo `gpt-5.6-terra`), como revisor independente.** Na iteração 3, depois que o Claude Code concluiu que os ADRs não precisavam de mudanças, pedi ao Codex que executasse o mesmo `prompts/adrs-generator.md` sobre os ADRs, com permissão de escrita só dentro do repositório. O Codex leu as instruções do projeto, a transcrição inteira, os ADRs e o código, rodou suas próprias verificações de citações, caminhos e links, e chegou ao mesmo veredito: nenhuma alteração necessária. Conferi pelo `git diff` que ele não alterou nenhum arquivo. Para isso o repositório tem `AGENTS.md`, com o mesmo conteúdo de `CLAUDE.md`. O Codex não gerou nenhum dos documentos entregues; seu papel foi só de segunda opinião.
 
 ## Workflow adotado
 
@@ -36,7 +36,7 @@ A sequência abaixo foi reconstruída a partir do histórico do git (`git log`) 
    - colunas fixas do Tracker;
    - a ambiguidade conhecida do número de tentativas de retry.
 2. **ADRs primeiro** (`prompts/adrs-generator.md`). Os ADRs são a base dos outros documentos, então vieram antes. O prompt pede um inventário das decisões fechadas na transcrição, com o falante que fechou cada uma, e respeita a classificação da própria reunião. Por exemplo, Sofia disse que o TLS "nem é decisão arquitetural" (`[09:23] Sofia`) e Larissa tratou o limite de 64KB como requisito não funcional (`[09:24] Larissa`), então nenhum dos dois ganhou ADR próprio. Resultado: 7 ADRs, cobrindo as 6 decisões exigidas mais o snapshot do payload, fechado depois do encerramento formal da call (`[09:52] Bruno`).
-3. **RFC** (`prompts/rfc-generator.md`). O RFC consolida a proposta sobre os ADRs, com 8 alternativas descartadas na reunião e as questões em aberto. O prompt separa as questões levantadas na reunião das lacunas encontradas ao escrever os ADRs, e impõe o limite de 700 a 2.600 palavras. O documento ficou com 2.432 palavras na iteração 1 e 2.473 após a revisão da iteração 2.
+3. **RFC** (`prompts/rfc-generator.md`). O RFC consolida a proposta sobre os ADRs, com 8 alternativas descartadas na reunião e as questões em aberto. O prompt separa as questões levantadas na reunião das lacunas encontradas ao escrever os ADRs, e impõe o limite de 700 a 2.600 palavras. O documento ficou com 2.432 palavras na iteração 1, 2.473 na iteração 2 e 2.480 na iteração 3.
 4. **FDD** (`prompts/fdd-generator.md`). O FDD desce ao nível de implementação: fluxos numerados, 7 endpoints, matriz de erros `WEBHOOK_*`, resiliência, observabilidade e 18 arquivos existentes na seção de integração. Antes de escrever, li padrões concretos do código: `validate.middleware.ts`, `response.ts`, `customer.controller.ts`, `user.routes.ts` e `tests/setup.ts`. Assim cada hipótese cita o arquivo cujo padrão segue.
 5. **PRD** (`prompts/prd-generator.md`). O PRD veio por último entre os documentos grandes, como consolidação. Traduz as decisões para termos de produto e lista 8 itens fora de escopo, todos com fala de origem.
 6. **Tracker** (`prompts/tracker-generator.md`). Montei o Tracker com os quatro documentos prontos. Um script Python conferiu cada linha:
@@ -49,7 +49,8 @@ A sequência abaixo foi reconstruída a partir do histórico do git (`git log`) 
    O Tracker não aceita caminhos marcados como `(novo)` como fonte de código. Na iteração 1, resultado de 415 linhas, 99,0% de cobertura, 82,7% de linhas da transcrição e 72 de código, com 4 afirmações sem origem.
 7. **README por último.** Este README descreve o processo, então só podia ser escrito depois que todas as etapas anteriores existiam. O prompt `prompts/readme-generator.md` exige reconstruir a jornada a partir de evidências (git, prompts, relatórios) e não de um fluxo idealizado. A iteração 1 foi fechada no commit `8d5d7a3`.
 8. **Iteração 2: os mesmos prompts em modo de revisão.** Rodei de novo a cadeia completa (ADRs, RFC, FDD, PRD, Tracker e este README) sobre os documentos já existentes. Desta vez cada prompt entrou no ramo "documento com conteúdo": releitura integral, comparação com as fontes e com o que as etapas posteriores tinham descoberto, e correção no lugar, sem duplicar seções. Uma mudança num ADR foi propagada para o RFC, o FDD e o PRD na mesma rodada. O Tracker terminou com 425 linhas, 100% de cobertura, 81,6% de linhas da transcrição, 78 de código e nenhum item sem origem.
-9. **Revisão final** (`prompts/final-review.md`). É uma auditoria somente leitura, critério a critério, com veredito binário. Ela roda depois deste README, porque também avalia o README.
+9. **Iteração 3: teste de convergência.** Depois do commit da iteração 2 (`82d5b3c`), rodei a cadeia mais uma vez para verificar se os prompts convergiam, como exigem ("rodar de novo não deve mudar o que já está correto"). Nos ADRs a rodada terminou sem nenhuma alteração, confirmada de forma independente pelo Codex. Nos documentos seguintes, a releitura integral, que a iteração 2 não tinha feito porque só revisou os trechos afetados, achou poucos ajustes de precisão: 3 linhas no RFC, 4 trechos no FDD e 3 no PRD. O Tracker só teve dois resumos atualizados e continuou com 425 linhas e 100% de cobertura.
+10. **Revisão final** (`prompts/final-review.md`). É uma auditoria somente leitura, critério a critério, com veredito binário. Ela roda depois deste README, porque também avalia o README.
 
 A ordem real seguiu a sugerida pelo enunciado. A dependência entre etapas é explícita nos prompts: quando um documento muda, os que dependem dele devem ser regenerados. Uma mudança em ADR, por exemplo, afeta RFC, FDD, PRD, Tracker e README.
 
@@ -106,10 +107,13 @@ Arquivo completo: [`prompts/final-review.md`](prompts/final-review.md). Fecha o 
 
 ## Iterações e ajustes
 
-O histórico do git não registra quantas versões cada prompt teve antes do commit `a3d6b46`; os sete prompts entraram num único commit, e esse número não pode ser reconstruído. Na produção dos documentos houve **2 iterações principais**:
+O histórico do git não registra quantas versões cada prompt teve antes do commit `a3d6b46`; os sete prompts entraram num único commit, e esse número não pode ser reconstruído. Na produção dos documentos houve **3 iterações principais**:
 
 - **Iteração 1** (commit `8d5d7a3`): seis ciclos, um por prompt (ADRs, RFC, FDD, PRD, Tracker, README), cada um com geração, verificação mecânica e uma rodada de correções.
-- **Iteração 2**: a mesma cadeia em modo de revisão, motivada pelas pendências que a iteração 1 deixou registradas.
+- **Iteração 2** (commit `82d5b3c`): a mesma cadeia em modo de revisão, motivada pelas pendências que a iteração 1 deixou registradas.
+- **Iteração 3**: nova rodada para testar a convergência. Os ADRs não mudaram, com confirmação do Codex. Os outros documentos tiveram só ajustes de precisão, sem item novo nem item sem origem.
+
+A queda no volume de mudanças mostra a convergência: 2.104 linhas adicionadas no commit da iteração 1, 69 no da iteração 2 (ambos incluindo o README) e 18 nos documentos de `docs/` na iteração 3.
 
 Nenhum documento foi revertido. Os ajustes concretos foram estes:
 
@@ -141,6 +145,16 @@ Nenhum documento foi revertido. Os ajustes concretos foram estes:
 7. **Conflito propagado para o lugar certo (iteração 2, ADR-006 e RFC).**
    - *Problema:* o conflito de `WEBHOOK_INVALID_URL` encontrado no FDD (item 3) só existia no FDD. Ele não aparecia no ADR-006, que lista o código e a validação Zod lado a lado, nem nas questões em aberto do RFC.
    - *Correção:* a revisão registrou o conflito como lacuna no ADR-006 e como questão 10 no RFC. O FDD passou a apontar para os dois, e o Tracker ganhou as linhas `ADR-006-QA-03` e `RFC-QA-10`.
+8. **Generalização que ignorava o filtro de inserção (iteração 3, RFC e PRD).**
+   - *Problema:* o resumo do RFC e o escopo do PRD diziam que "a cada mudança de status" é gerada uma notificação.
+   - *Por que estava errado:* pela decisão do ADR-001, só há evento quando algum endpoint do customer escuta aquele status (`[09:34] Bruno`). Os próprios requisitos FR-06 e FR-07 do PRD já diziam isso, então os documentos se contradiziam internamente.
+   - *Correção:* as frases passaram a dizer "escutada por algum webhook". A iteração 2 tinha corrigido uma frase do RFC com o mesmo problema mas deixado passar as outras, porque só revisou os trechos afetados pelas mudanças nos ADRs.
+9. **Estimativas sem rótulo de hipótese (iteração 3, RFC, FDD e PRD).**
+   - *Problema:* várias partes eram escolhas próprias apresentadas como fatos:
+     - as probabilidades dos riscos no FDD e no PRD;
+     - três critérios de aceite do FDD que testam comportamentos definidos como hipótese em outras seções;
+     - a coluna "Trade-offs levantados" do RFC, cujos benefícios eram inferências minhas e não falas da reunião.
+   - *Correção:* rótulos de hipótese com referência cruzada. O cabeçalho do RFC virou "custos citados na fonte", e o benefício de "3 tentativas" passou a citar a fala literal de Bruno ("mais agressivo", `[09:16] Bruno`).
 
 ## Como navegar a entrega
 

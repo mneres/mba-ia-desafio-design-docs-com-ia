@@ -29,7 +29,7 @@ Regras aplicadas:
 | PRD-OBJ-04 | docs/PRD.md | Métrica | Zero eventos perdidos: evento existe se e somente se a transação commitou | TRANSCRICAO | [09:06] Diego |
 | PRD-OBJ-05 | docs/PRD.md | Métrica | Janela de recuperação automática de cerca de 15 horas | TRANSCRICAO | [09:17] Diego |
 | PRD-ESC-01 | docs/PRD.md | Escopo | CRUD de endpoints com escolha dos status de interesse | TRANSCRICAO | [09:33] Bruno |
-| PRD-ESC-02 | docs/PRD.md | Escopo | Notificação automática a cada mudança de status | TRANSCRICAO | [09:40] Bruno |
+| PRD-ESC-02 | docs/PRD.md | Escopo | Notificação automática a cada mudança de status escutada por algum endpoint | TRANSCRICAO | [09:40] Bruno |
 | PRD-ESC-03 | docs/PRD.md | Escopo | Assinatura de cada notificação e rotação de secret | TRANSCRICAO | [09:22] Sofia |
 | PRD-ESC-04 | docs/PRD.md | Escopo | Retry automático, fila de falhas e reenvio por administrador | TRANSCRICAO | [09:48] Larissa |
 | PRD-ESC-05 | docs/PRD.md | Escopo | Histórico de entregas por endpoint | TRANSCRICAO | [09:34] Marcos |
@@ -213,7 +213,7 @@ Regras aplicadas:
 | FDD-FLUXO-06 | docs/FDD.md | Fluxo | Payload snapshot na inserção | TRANSCRICAO | [09:52] Larissa |
 | FDD-FLUXO-07 | docs/FDD.md | Fluxo | Payload acima de 64KB gera erro | TRANSCRICAO | [09:24] Larissa |
 | FDD-FLUXO-08 | docs/FDD.md | Fluxo | Falha no insert faz rollback de tudo | TRANSCRICAO | [09:40] Bruno |
-| FDD-FLUXO-09 | docs/FDD.md | Fluxo | Resposta de PATCH /orders/:id/status inalterada | CODIGO | src/modules/orders/order.routes.ts |
+| FDD-FLUXO-09 | docs/FDD.md | Fluxo | Resposta de sucesso de PATCH /orders/:id/status inalterada | CODIGO | src/modules/orders/order.routes.ts |
 | FDD-FLUXO-10 | docs/FDD.md | Fluxo | Worker em src/worker.ts (novo) com npm run worker | TRANSCRICAO | [09:11] Larissa |
 | FDD-FLUXO-11 | docs/FDD.md | Fluxo | Lógica em webhook.worker.ts ou webhook.processor.ts | TRANSCRICAO | [09:28] Bruno |
 | FDD-FLUXO-12 | docs/FDD.md | Fluxo | PrismaClient próprio no worker | TRANSCRICAO | [09:30] Bruno |
@@ -458,6 +458,7 @@ Rotuladas como hipótese nos documentos e fora da contagem de itens identificáv
   - Meta de adoção por 3 de 3 clientes.
   - Queda do polling em `GET /orders`.
   - Validação com os clientes solicitantes antes de liberar para outros.
+  - Probabilidades dos riscos (seção 10).
 - **docs/FDD.md, objetivos e dados:**
   - `eventId` estável em retries e replays.
   - Uma linha de outbox por endpoint com `eventId` compartilhado.
@@ -497,6 +498,8 @@ Rotuladas como hipótese nos documentos e fora da contagem de itens identificáv
 - **docs/FDD.md, critérios de aceite:**
   - Listagens sem `secret`.
   - Dupla assinatura nas 24h após rotação.
+- **docs/FDD.md, riscos:**
+  - Probabilidades dos riscos sem fonte citada (seção 12).
 
 ## Itens sem origem
 

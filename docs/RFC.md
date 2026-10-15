@@ -13,7 +13,7 @@
 ## Resumo executivo (TL;DR)
 
 - **Problema:** três clientes B2B fazem polling no `GET /orders` para descobrir mudanças de status, o que torna a integração lenta e cara; um deles sinalizou migração para o concorrente se não houver solução até o fim do trimestre (`[09:00] Marcos`).
-- **Proposta:** a cada mudança de status, `OrderService.changeStatus()` grava um evento numa tabela outbox no MySQL **na mesma transação**; um worker em processo separado lê a outbox por polling a cada 2 segundos e envia um POST HTTPS assinado com HMAC-SHA256 para cada endpoint cadastrado pelo cliente, com retry exponencial e DLQ.
+- **Proposta:** a cada mudança de status escutada por algum webhook, `OrderService.changeStatus()` grava um evento numa tabela outbox no MySQL **na mesma transação**; um worker em processo separado lê a outbox por polling a cada 2 segundos e envia um POST HTTPS assinado com HMAC-SHA256 para cada endpoint cadastrado pelo cliente, com retry exponencial e DLQ.
 - **Por que assim:** garante que nenhuma mudança de status escutada por algum webhook fica sem evento, sem que um cliente lento trave a transação de pedidos, e sem subir infraestrutura nova para um time pequeno (`[09:07] Diego`).
 - **Trade-off principal:** entrega at-least-once com latência de alguns segundos; o cliente precisa deduplicar pelo `X-Event-Id`.
 - **Maior questão em aberto:** o número exato de envios da política de retry (5 no total ou envio inicial mais 5 retentativas), que a reunião deixou contraditório.
@@ -77,13 +77,13 @@ A feature segue os padrões do OMS em vez de introduzir novos (`[09:30] Larissa`
 
 ## Alternativas consideradas
 
-| Alternativa | Trade-offs levantados | Motivo do descarte | Fonte |
+| Alternativa | Trade-offs (custos citados na fonte) | Motivo do descarte | Fonte |
 | --- | --- | --- | --- |
 | **Disparo HTTP síncrono dentro de `changeStatus`** | Mais simples, sem tabela nem worker; mas acopla a transação de pedidos à latência e à disponibilidade de cada cliente | Um cliente lento travaria mudanças de status de outros pedidos, e não há como dar rollback no status porque o cliente caiu | `[09:04] Bruno`, `[09:06] Diego`, [ADR-001](adrs/ADR-001-outbox-no-mysql.md) |
 | **Redis Streams ou fila equivalente** | Mecanismo de mensageria dedicado; exige subir e operar infraestrutura nova | Overengineering para um time pequeno; o outbox no MySQL existente resolve | `[09:07] Larissa`, `[09:07] Diego`, [ADR-001](adrs/ADR-001-outbox-no-mysql.md) |
 | **Trigger do MySQL para acordar o worker** | Seria mais reativo que polling | O MySQL não tem `NOTIFY/LISTEN`; trigger não notifica processo externo e exigiria improviso; polling de 2s já atende a meta de 10s | `[09:09] Bruno`, `[09:09] Diego`, [ADR-002](adrs/ADR-002-worker-separado-com-polling.md) |
 | **Worker dentro do processo da API** | Um processo a menos para operar | Um restart da API derrubaria o worker | `[09:11] Diego`, [ADR-002](adrs/ADR-002-worker-separado-com-polling.md) |
-| **Retry indefinido, ou apenas 3 tentativas** | Indefinido nunca desiste; 3 tentativas libera a fila mais cedo | Indefinido deixa evento pendurado para sempre; 3 tentativas se esgotam em cerca de 30 minutos e não cobrem manutenções de duas horas já observadas | `[09:15] Diego`, `[09:16] Bruno`, `[09:16] Diego`, [ADR-003](adrs/ADR-003-retry-com-backoff-exponencial-e-dlq.md) |
+| **Retry indefinido, ou apenas 3 tentativas** | Indefinido nunca desiste; 3 tentativas é "mais agressivo" (`[09:16] Bruno`) | Indefinido deixa evento pendurado para sempre; 3 tentativas se esgotam em cerca de 30 minutos e não cobrem manutenções de duas horas já observadas | `[09:15] Diego`, `[09:16] Bruno`, `[09:16] Diego`, [ADR-003](adrs/ADR-003-retry-com-backoff-exponencial-e-dlq.md) |
 | **Secret global da plataforma** | Uma única secret para gerenciar | Se vaza uma, vaza tudo | `[09:21] Sofia`, [ADR-004](adrs/ADR-004-assinatura-hmac-sha256-com-secret-por-endpoint.md) |
 | **Exactly-once** | Elimina duplicatas no cliente | Exige coordenação dos dois lados e é muito mais complexo; at-least-once com `event_id` é o padrão de mercado | `[09:25] Diego`, [ADR-005](adrs/ADR-005-entrega-at-least-once-com-x-event-id.md) |
 | **Renderizar o payload só no envio** | Guarda apenas o `order_id` na outbox | Se o pedido mudar depois, o evento deixa de refletir a mudança que o originou | `[09:51] Bruno`, `[09:52] Larissa`, [ADR-007](adrs/ADR-007-payload-snapshot-na-insercao.md) |

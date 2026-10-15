@@ -84,7 +84,7 @@ Ponto de entrada: `OrderService.changeStatus()` em `src/modules/orders/order.ser
 6. Calcula o tamanho do JSON serializado em bytes. Se exceder 64KB, lança `WebhookPayloadTooLargeError`, o que faz rollback da mudança de status (hipótese sobre o ponto de verificação; ver risco 12.5).
 7. Insere com `tx.webhookOutbox.createMany` uma linha por endpoint: `status = PENDING`, `attempts = 0`, `nextAttemptAt = now()`.
 8. Se qualquer insert falhar, a exceção propaga e o `$transaction` faz rollback de status, histórico, estoque e outbox juntos (`[09:40] Bruno`).
-9. Após o commit, `changeStatus` devolve o pedido como hoje; a resposta HTTP de `PATCH /api/v1/orders/:id/status` não muda.
+9. Após o commit, `changeStatus` devolve o pedido como hoje; a resposta de sucesso de `PATCH /api/v1/orders/:id/status` não muda. As únicas respostas novas são as de falha dos passos 6 e 8 (seção 10).
 
 `OrderService.create()` **não** publica evento nesta versão (hipótese; a reunião só tratou de mudança de status, lacuna registrada no [RFC](RFC.md)).
 
@@ -662,8 +662,8 @@ O projeto não tem biblioteca de métricas nem de tracing (`package.json`); só 
 - [ ] Falha forçada no insert da outbox faz rollback do status, do histórico e do estoque.
 - [ ] Mudança de status do pedido após a inserção não altera o `payload` já gravado (`[09:52] Larissa`).
 - [ ] Os sete endpoints da seção 5 respondem com os status codes documentados, e `POST /webhooks` com URL `http` retorna 400.
-- [ ] Listagens nunca retornam `secret`; criação e rotação retornam.
-- [ ] Replay por `OPERATOR` retorna 403; por `ADMIN` retorna 202 e volta a linha da outbox para `PENDING` com o mesmo `eventId`.
+- [ ] Listagens nunca retornam `secret`; criação e rotação retornam (hipótese, ver 5.1).
+- [ ] Replay por `OPERATOR` retorna 403; por `ADMIN` retorna 202 e volta a linha da outbox para `PENDING` com o mesmo `eventId` (preservação do `eventId` é hipótese, ver 4.4).
 
 **Desempenho**
 - [ ] Com cliente respondendo em menos de 1s, o tempo entre o commit e a entrega é menor que 10s em 95% dos eventos (`[09:02] Marcos`).
@@ -677,7 +677,7 @@ O projeto não tem biblioteca de métricas nem de tracing (`package.json`); só 
 
 **Segurança**
 - [ ] `X-Signature` confere com HMAC-SHA256 do corpo bruto e a secret do endpoint.
-- [ ] Após rotação, envios das próximas 24h carregam as assinaturas da secret nova e da anterior; depois, só a nova.
+- [ ] Após rotação, envios das próximas 24h carregam as assinaturas da secret nova e da anterior; depois, só a nova (hipótese, ver 5.8).
 - [ ] Secrets não aparecem em nenhum log (teste sobre a saída do Pino).
 - [ ] Revisão de segurança de HMAC e geração de secret concluída por Sofia antes do deploy (`[09:46] Sofia`).
 
@@ -688,6 +688,8 @@ O projeto não tem biblioteca de métricas nem de tracing (`package.json`); só 
 ---
 
 ## 12. Riscos e mitigação
+
+As probabilidades abaixo são estimativas (hipótese), exceto onde citam fonte.
 
 ### 12.1 Falha na outbox bloqueia mudanças de status
 

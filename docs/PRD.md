@@ -51,7 +51,7 @@ Hoje o OMS controla o ciclo de vida do pedido (`PENDING`, `PAID`, `PROCESSING`, 
 
 **Incluso**
 - Cadastro, listagem, edição e remoção de endpoints de webhook por customer, com escolha dos status de interesse.
-- Notificação automática a cada mudança de status do pedido.
+- Notificação automática a cada mudança de status do pedido que algum endpoint do customer escuta.
 - Assinatura de cada notificação e rotação da secret pelo próprio cliente.
 - Novas tentativas automáticas, fila de falhas definitivas e reenvio manual por administrador.
 - Histórico de entregas por endpoint.
@@ -110,7 +110,7 @@ Contratos, payloads e códigos de erro de cada requisito estão no [FDD](FDD.md)
 
 ## 8. Decisões e trade-offs principais
 
-- **Notificação registrada junto com a mudança de status:** o cliente nunca deixa de ser avisado de uma mudança confirmada, e um cliente lento não atrasa a operação dos demais. Em troca, a notificação sai alguns segundos depois, e não no mesmo instante. Ver [ADR-001](adrs/ADR-001-outbox-no-mysql.md).
+- **Notificação registrada junto com a mudança de status:** o cliente nunca deixa de ser avisado de uma mudança confirmada que ele escuta, e um cliente lento não atrasa a operação dos demais. Em troca, a notificação sai alguns segundos depois, e não no mesmo instante. Ver [ADR-001](adrs/ADR-001-outbox-no-mysql.md).
 - **Envio por um processo separado que verifica novos eventos a cada 2 segundos:** sem infraestrutura nova e dentro da meta de 10 segundos. Em troca, há até 2 segundos de espera e um único processo de envio, que limita a escala. Ver [ADR-002](adrs/ADR-002-worker-separado-com-polling.md).
 - **Novas tentativas por cerca de 15 horas e fila de falhas:** cobre manutenções de horas sem ação manual. Em troca, um cliente fora do ar por mais tempo depende de reenvio por um administrador e não é avisado. Ver [ADR-003](adrs/ADR-003-retry-com-backoff-exponencial-e-dlq.md).
 - **Secret por endpoint com rotação:** o vazamento de uma secret afeta só um endpoint, e o cliente tem 24 horas para migrar os sistemas dele para a nova secret (`[09:21] Sofia`). Em troca, o cliente precisa implementar a verificação da assinatura. Ver [ADR-004](adrs/ADR-004-assinatura-hmac-sha256-com-secret-por-endpoint.md).
@@ -128,6 +128,8 @@ Contratos, payloads e códigos de erro de cada requisito estão no [FDD](FDD.md)
 - **Lado do cliente:** endpoint `https`, verificação da assinatura e descarte de repetições pelo identificador do evento.
 
 ## 10. Riscos e mitigação
+
+As probabilidades são estimativas (hipótese); a reunião não as quantificou.
 
 | Risco | Probabilidade | Impacto | Mitigação |
 | --- | --- | --- | --- |
