@@ -66,7 +66,7 @@ Regras aplicadas:
 | PRD-NFR-08 | docs/PRD.md | Requisito Não Funcional | Somente endereços https | TRANSCRICAO | [09:23] Sofia |
 | PRD-NFR-09 | docs/PRD.md | Requisito Não Funcional | Notificação de no máximo 64KB, erro acima disso | TRANSCRICAO | [09:24] Larissa |
 | PRD-NFR-10 | docs/PRD.md | Requisito Não Funcional | Registro de quem fez cada reenvio | TRANSCRICAO | [09:36] Sofia |
-| PRD-NFR-11 | docs/PRD.md | Requisito Não Funcional | Reuso dos padrões existentes do OMS | TRANSCRICAO | [09:30] Larissa |
+| PRD-NFR-11 | docs/PRD.md | Requisito Não Funcional | Reuso dos padrões existentes do OMS, sem alterar rotas existentes | TRANSCRICAO | [09:30] Larissa |
 | PRD-NFR-12 | docs/PRD.md | Requisito Não Funcional | Envio em processo separado da API | TRANSCRICAO | [09:11] Diego |
 | PRD-DEC-01 | docs/PRD.md | Decisão | Notificação registrada junto com a mudança de status (ADR-001) | TRANSCRICAO | [09:08] Larissa |
 | PRD-DEC-02 | docs/PRD.md | Decisão | Processo separado verificando a cada 2 segundos (ADR-002) | TRANSCRICAO | [09:10] Larissa |
@@ -97,6 +97,7 @@ Regras aplicadas:
 | PRD-CA-07 | docs/PRD.md | Critério de Aceite | Sequência de retry e envio à fila de falhas | TRANSCRICAO | [09:17] Diego |
 | PRD-CA-08 | docs/PRD.md | Critério de Aceite | Operador não reenvia; administrador reenvia com autor registrado | TRANSCRICAO | [09:36] Sofia |
 | PRD-CA-09 | docs/PRD.md | Critério de Aceite | Histórico de entregas completo | TRANSCRICAO | [09:34] Marcos |
+| PRD-CA-11 | docs/PRD.md | Critério de Aceite | Rotas existentes iguais; mudança de status só falha se a notificação não puder ser registrada | TRANSCRICAO | [09:40] Bruno |
 | PRD-CA-10 | docs/PRD.md | Critério de Aceite | Revisão de segurança concluída antes do deploy | TRANSCRICAO | [09:46] Sofia |
 | PRD-TEST-01 | docs/PRD.md | Estratégia de Teste | Testes de integração com Vitest contra MySQL real | CODIGO | tests/setup.ts |
 | PRD-TEST-02 | docs/PRD.md | Estratégia de Teste | Testes ponta a ponta previstos no plano | TRANSCRICAO | [09:46] Larissa |
@@ -155,6 +156,7 @@ Regras aplicadas:
 | RFC-QA-07 | docs/RFC.md | Questão em Aberto | Replay da DLQ preserva o event_id | TRANSCRICAO | [09:18] Diego |
 | RFC-QA-08 | docs/RFC.md | Questão em Aberto | Eventos do mesmo pedido enquanto um anterior está em retry | TRANSCRICAO | [09:12] Diego |
 | RFC-QA-09 | docs/RFC.md | Questão em Aberto | OrderService.create gera evento | CODIGO | src/modules/orders/order.service.ts |
+| RFC-QA-10 | docs/RFC.md | Questão em Aberto | URL http no Zod vira VALIDATION_ERROR, nunca WEBHOOK_INVALID_URL | CODIGO | src/middlewares/validate.middleware.ts |
 | RFC-ESC-01 | docs/RFC.md | Fora de Escopo | Notificação por email adiada | TRANSCRICAO | [09:37] Larissa |
 | RFC-ESC-02 | docs/RFC.md | Fora de Escopo | Dashboard visual é projeto do frontend | TRANSCRICAO | [09:40] Larissa |
 | RFC-INT-07 | docs/RFC.md | Integração | changeStatus passa a chamar a publicação de evento | TRANSCRICAO | [09:41] Bruno |
@@ -218,11 +220,13 @@ Regras aplicadas:
 | FDD-FLUXO-13 | docs/FDD.md | Fluxo | Polling a cada 2 segundos dos pendentes mais antigos | TRANSCRICAO | [09:09] Diego |
 | FDD-FLUXO-14 | docs/FDD.md | Fluxo | Processamento em ordem de createdAt | TRANSCRICAO | [09:12] Diego |
 | FDD-FLUXO-15 | docs/FDD.md | Fluxo | POST com timeout de 10 segundos | TRANSCRICAO | [09:42] Diego |
+| FDD-FLUXO-25 | docs/FDD.md | Fluxo | fetch nativo do Node 20, sem dependência nova (hipótese) | CODIGO | package.json |
 | FDD-FLUXO-16 | docs/FDD.md | Fluxo | Cada tentativa registrada no histórico de entregas | TRANSCRICAO | [09:34] Marcos |
 | FDD-FLUXO-17 | docs/FDD.md | Fluxo | Sucesso marca o evento como entregue | TRANSCRICAO | [09:08] Diego |
 | FDD-FLUXO-18 | docs/FDD.md | Fluxo | Encerramento em SIGINT/SIGTERM com $disconnect (hipótese) | CODIGO | src/server.ts |
 | FDD-FLUXO-19 | docs/FDD.md | Fluxo | Reagendamento pelos intervalos 1m/5m/30m/2h/12h | TRANSCRICAO | [09:17] Diego |
 | FDD-FLUXO-20 | docs/FDD.md | Fluxo | Retry esgotado: dead letter com payload e motivo | TRANSCRICAO | [09:18] Diego |
+| FDD-FLUXO-24 | docs/FDD.md | Fluxo | Entrada na DLQ numa única transação (hipótese) | CODIGO | src/modules/orders/order.service.ts |
 | FDD-FLUXO-21 | docs/FDD.md | Fluxo | Replay exige ADMIN | TRANSCRICAO | [09:36] Larissa |
 | FDD-FLUXO-22 | docs/FDD.md | Fluxo | Replay recoloca o evento na outbox como pendente | TRANSCRICAO | [09:18] Diego |
 | FDD-FLUXO-23 | docs/FDD.md | Fluxo | Replay logado com o autor para auditoria | TRANSCRICAO | [09:36] Sofia |
@@ -314,6 +318,11 @@ Regras aplicadas:
 | FDD-DEP-02 | docs/FDD.md | Dependência | MySQL 8.0 | CODIGO | docker-compose.yml |
 | FDD-DEP-03 | docs/FDD.md | Dependência | Prisma 5.22.0 | CODIGO | package.json |
 | FDD-DEP-04 | docs/FDD.md | Dependência | Express, Zod, Pino e uuid nas versões atuais | CODIGO | package.json |
+| FDD-DEP-05 | docs/FDD.md | Compatibilidade | Rotas novas em prefixos próprios, routers atuais inalterados (hipótese) | CODIGO | src/routes/index.ts |
+| FDD-DEP-06 | docs/FDD.md | Compatibilidade | PATCH de status pode falhar se a gravação da outbox falhar | TRANSCRICAO | [09:40] Bruno |
+| FDD-DEP-07 | docs/FDD.md | Compatibilidade | Migração só cria tabelas; relação inversa sem coluna como Customer.orders (hipótese) | CODIGO | prisma/schema.prisma |
+| FDD-DEP-08 | docs/FDD.md | Compatibilidade | Sem webhooks cadastrados, uma consulta a mais e nenhum insert | TRANSCRICAO | [09:34] Bruno |
+| FDD-DEP-09 | docs/FDD.md | Compatibilidade | Worker implantável depois da API, eventos acumulam na outbox (hipótese) | TRANSCRICAO | [09:06] Diego |
 | FDD-CA-01 | docs/FDD.md | Critério de Aceite | Uma linha PENDING por endpoint interessado na mesma transação | TRANSCRICAO | [09:40] Bruno |
 | FDD-CA-02 | docs/FDD.md | Critério de Aceite | Status não escutado não cria linha | TRANSCRICAO | [09:34] Bruno |
 | FDD-CA-03 | docs/FDD.md | Critério de Aceite | Falha no insert faz rollback completo | TRANSCRICAO | [09:41] Diego |
@@ -411,6 +420,7 @@ Regras aplicadas:
 | ADR-006-ALT-02 | docs/adrs/ADR-006-reuso-dos-padroes-existentes.md | Alternativa Descartada | Serviço separado (não discutida), contraria mesma stack | TRANSCRICAO | [09:11] Diego |
 | ADR-006-QA-01 | docs/adrs/ADR-006-reuso-dos-padroes-existentes.md | Questão em Aberto | Nome do arquivo de processamento | TRANSCRICAO | [09:28] Bruno |
 | ADR-006-QA-02 | docs/adrs/ADR-006-reuso-dos-padroes-existentes.md | Questão em Aberto | User sem relação com Customer | CODIGO | prisma/schema.prisma |
+| ADR-006-QA-03 | docs/adrs/ADR-006-reuso-dos-padroes-existentes.md | Questão em Aberto | ZodError vira VALIDATION_ERROR, conflito com WEBHOOK_INVALID_URL | CODIGO | src/middlewares/validate.middleware.ts |
 | ADR-006-TO-01 | docs/adrs/ADR-006-reuso-dos-padroes-existentes.md | Trade-off | Herda o modelo de autorização atual | TRANSCRICAO | [09:37] Sofia |
 | ADR-007 | docs/adrs/ADR-007-payload-snapshot-na-insercao.md | Decisão | Payload snapshot na inserção | TRANSCRICAO | [09:52] Bruno |
 | ADR-007-CTX-01 | docs/adrs/ADR-007-payload-snapshot-na-insercao.md | Contexto | Campos do modelo Order | CODIGO | prisma/schema.prisma |
@@ -431,14 +441,14 @@ Itens identificáveis = itens com linha + itens sem origem (listados abaixo). Hi
 
 | Documento | Itens identificáveis | Itens com linha | Cobertura |
 | --- | --- | --- | --- |
-| docs/PRD.md | 94 | 93 | 98,9% |
-| docs/RFC.md | 67 | 67 | 100,0% |
-| docs/FDD.md | 172 | 169 | 98,3% |
-| docs/adrs/ | 86 | 86 | 100,0% |
-| **Total** | 419 | 415 | 99,0% |
+| docs/PRD.md | 94 | 94 | 100,0% |
+| docs/RFC.md | 68 | 68 | 100,0% |
+| docs/FDD.md | 176 | 176 | 100,0% |
+| docs/adrs/ | 87 | 87 | 100,0% |
+| **Total** | 425 | 425 | 100,0% |
 
-- Linhas com Fonte TRANSCRICAO: 343 de 415 (82,7%)
-- Linhas com Fonte CODIGO: 72
+- Linhas com Fonte TRANSCRICAO: 347 de 425 (81,6%)
+- Linhas com Fonte CODIGO: 78
 
 ## Hipóteses puras (sem padrão de código, sem linha)
 
@@ -490,11 +500,4 @@ Rotuladas como hipótese nos documentos e fora da contagem de itens identificáv
 
 ## Itens sem origem
 
-Afirmações que não são hipóteses rotuladas e não têm respaldo direto na transcrição nem no código. Contam como itens identificáveis sem linha.
-
-| Documento | Seção | Afirmação |
-| --- | --- | --- |
-| docs/PRD.md | 11. Critérios de aceitação | "As APIs existentes do OMS continuam com o mesmo contrato" |
-| docs/FDD.md | 10. Garantias de compatibilidade | Nenhum endpoint existente muda de contrato |
-| docs/FDD.md | 10. Garantias de compatibilidade | A migração só cria tabelas e um enum, sem alterar colunas existentes |
-| docs/FDD.md | 10. Garantias de compatibilidade | O worker pode ser implantado depois da API sem perda de eventos |
+Nenhum. As quatro afirmações sem origem apontadas na versão anterior (seção 11 do PRD e três garantias da seção 10 do FDD) foram reescritas nos próprios documentos com citação ou como hipótese ligada a código, e agora têm linha: PRD-CA-11 e FDD-DEP-05 a FDD-DEP-09.

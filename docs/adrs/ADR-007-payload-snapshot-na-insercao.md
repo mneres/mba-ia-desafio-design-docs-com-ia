@@ -16,7 +16,7 @@ Larissa (Tech Lead), Diego (Engenheiro Sênior, Plataforma), Bruno (Engenheiro P
 
 Depois do encerramento formal da reunião, Bruno perguntou se a linha da outbox ([ADR-001](ADR-001-outbox-no-mysql.md)) guarda o payload já renderizado ou só o `order_id`, renderizando na hora do envio (`[09:51] Bruno`). A diferença importa porque o envio pode acontecer bem depois da mudança de status: até cerca de 15 horas com o retry de [ADR-003](ADR-003-retry-com-backoff-exponencial-e-dlq.md), ou mais com replay da DLQ. Nesse intervalo o pedido pode ter mudado de novo.
 
-O pedido em `prisma/schema.prisma` (`Order`) tem `orderNumber`, `customerId`, `status`, `totalCents` e uma lista de `OrderItem`. Antes, a reunião já tinha definido o formato do payload (`[09:43] Diego`) e um limite de tamanho (`[09:24] Larissa`), que a própria reunião classificou como requisito não funcional e não como decisão separada (`[09:24] Larissa`).
+O pedido em `prisma/schema.prisma` (`Order`) tem `orderNumber`, `customerId`, `status`, `totalCents` e uma lista de `OrderItem`. Antes, a reunião já tinha definido o formato do payload (`[09:43] Diego`) e um limite de tamanho, que a própria reunião classificou como requisito não funcional e não como decisão separada (`[09:24] Larissa`).
 
 ## Decisão
 

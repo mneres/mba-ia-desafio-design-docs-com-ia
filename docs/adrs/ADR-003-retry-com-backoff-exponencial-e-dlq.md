@@ -43,7 +43,7 @@ Lacunas que a reunião deixou abertas:
 ## Consequências
 
 **Positivas**
-- Cobre indisponibilidades de horas, como manutenções planejadas, sem intervenção humana.
+- Cobre indisponibilidades de horas, como a manutenção planejada de duas horas já vivida com um cliente (`[09:16] Diego`), sem intervenção humana.
 - Eventos nunca ficam pendurados indefinidamente na outbox.
 - Falhas permanentes ficam preservadas com motivo e payload, e podem ser reenviadas por um ADMIN com trilha de auditoria.
 

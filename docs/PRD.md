@@ -105,7 +105,7 @@ Contratos, payloads e códigos de erro de cada requisito estão no [FDD](FDD.md)
 | NFR-08 | Segurança | Somente endereços `https` | 0 URLs `http` aceitas | `[09:23] Sofia` |
 | NFR-09 | Limites | Tamanho máximo de uma notificação; acima disso gera erro, sem truncar | 64KB | `[09:24] Larissa` |
 | NFR-10 | Auditoria | Registro de quem reenviou cada notificação da fila de falhas | 100% dos reenvios | `[09:36] Sofia` |
-| NFR-11 | Compatibilidade | A feature segue os padrões já usados no OMS (módulos, erros, logs, validação) e não muda o contrato das APIs existentes | Nenhuma quebra de contrato | `[09:30] Larissa`, [FDD](FDD.md) seção 10 |
+| NFR-11 | Compatibilidade | A feature segue os padrões já usados no OMS (módulos, erros, logs, validação). As rotas existentes não mudam (hipótese, [FDD](FDD.md) seção 10); a única mudança é que a mudança de status de um pedido passa a falhar se a notificação não puder ser registrada | Nenhuma rota existente alterada | `[09:30] Larissa`, `[09:40] Bruno` |
 | NFR-12 | Operação | O envio roda em processo separado da API, para que um reinício da API não interrompa as notificações | Processo independente | `[09:11] Diego` |
 
 ## 8. Decisões e trade-offs principais
@@ -113,7 +113,7 @@ Contratos, payloads e códigos de erro de cada requisito estão no [FDD](FDD.md)
 - **Notificação registrada junto com a mudança de status:** o cliente nunca deixa de ser avisado de uma mudança confirmada, e um cliente lento não atrasa a operação dos demais. Em troca, a notificação sai alguns segundos depois, e não no mesmo instante. Ver [ADR-001](adrs/ADR-001-outbox-no-mysql.md).
 - **Envio por um processo separado que verifica novos eventos a cada 2 segundos:** sem infraestrutura nova e dentro da meta de 10 segundos. Em troca, há até 2 segundos de espera e um único processo de envio, que limita a escala. Ver [ADR-002](adrs/ADR-002-worker-separado-com-polling.md).
 - **Novas tentativas por cerca de 15 horas e fila de falhas:** cobre manutenções de horas sem ação manual. Em troca, um cliente fora do ar por mais tempo depende de reenvio por um administrador e não é avisado. Ver [ADR-003](adrs/ADR-003-retry-com-backoff-exponencial-e-dlq.md).
-- **Secret por endpoint com rotação:** o vazamento de uma secret afeta só um endpoint, e o cliente troca a secret sem perder notificações. Em troca, o cliente precisa implementar a verificação da assinatura. Ver [ADR-004](adrs/ADR-004-assinatura-hmac-sha256-com-secret-por-endpoint.md).
+- **Secret por endpoint com rotação:** o vazamento de uma secret afeta só um endpoint, e o cliente tem 24 horas para migrar os sistemas dele para a nova secret (`[09:21] Sofia`). Em troca, o cliente precisa implementar a verificação da assinatura. Ver [ADR-004](adrs/ADR-004-assinatura-hmac-sha256-com-secret-por-endpoint.md).
 - **Entrega pelo menos uma vez:** nenhuma notificação se perde por falha temporária. Em troca, o cliente pode receber repetições e precisa descartá-las. Ver [ADR-005](adrs/ADR-005-entrega-at-least-once-com-x-event-id.md).
 - **Reuso dos padrões do OMS:** entrega mais rápida e comportamento igual ao resto da API. Em troca, herda o controle de acesso atual, que não separa usuários por cliente. Ver [ADR-006](adrs/ADR-006-reuso-dos-padroes-existentes.md).
 - **Conteúdo da notificação fixado no momento da mudança:** a notificação mostra o pedido como estava quando o status mudou, mesmo se entregue horas depois. Em troca, quem precisa dos itens faz uma consulta extra. Ver [ADR-007](adrs/ADR-007-payload-snapshot-na-insercao.md).
@@ -150,7 +150,7 @@ Contratos, payloads e códigos de erro de cada requisito estão no [FDD](FDD.md)
 - [ ] Com o endpoint fora do ar, as novas tentativas seguem 1 min, 5 min, 30 min, 2 h e 12 h e, esgotadas, a notificação vai para a fila de falhas (FR-12, FR-13, NFR-05).
 - [ ] Um operador não consegue reenviar da fila de falhas; um administrador consegue, e o reenvio fica registrado com o autor (FR-14, NFR-10).
 - [ ] O histórico de entregas mostra sucesso ou falha, conteúdo, resposta e tempo de resposta (FR-11).
-- [ ] As APIs existentes do OMS continuam com o mesmo contrato (NFR-11).
+- [ ] As rotas existentes do OMS continuam iguais, e a mudança de status só falha por causa da feature quando a notificação não pode ser registrada (NFR-11).
 - [ ] A revisão de segurança foi concluída antes do deploy (`[09:46] Sofia`).
 - [ ] Os critérios técnicos da seção 11 do [FDD](FDD.md) foram atendidos.
 

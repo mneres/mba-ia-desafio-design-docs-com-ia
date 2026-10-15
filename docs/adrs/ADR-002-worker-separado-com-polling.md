@@ -43,7 +43,7 @@ Lacunas que a reunião deixou abertas:
 ## Consequências
 
 **Positivas**
-- Implementação simples sobre o banco existente, sem dependência nova.
+- Sem broker nem listener de banco: o worker lê a mesma tabela MySQL com o mesmo Prisma, "mesmo banco, mesma stack" (`[09:11] Diego`).
 - Ciclo de vida independente da API: deploys e restarts da API não interrompem entregas, e vice-versa.
 - Ordering por pedido enquanto houver um único worker, suficiente para o que os clientes pediram (`[09:14] Marcos`).
 

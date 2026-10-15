@@ -96,11 +96,11 @@ Entry-point `src/worker.ts` (novo), iniciado por `npm run worker` (novo) (`[09:1
 2. **Recuperação:** move para `PENDING` todas as linhas em `PROCESSING` (deixadas por um crash anterior; seguro com worker único, hipótese).
 3. **Loop**, a cada `WEBHOOK_POLL_INTERVAL_MS` (2000 ms, `[09:09] Diego`):
    1. Seleciona até `WEBHOOK_BATCH_SIZE` linhas com `status = PENDING` e `nextAttemptAt <= now()`, ordenadas por `createdAt` ascendente (`[09:12] Diego`).
-   2. Reivindica com `updateMany ... where { id in [...], status: PENDING }` para `PROCESSING` (fora de transação longa).
+   2. Reivindica com `updateMany ... where { id in [...], status: PENDING }` para `PROCESSING` (fora de transação longa; estratégia de reivindicação é hipótese).
    3. Para cada linha, em sequência, para preservar a ordem:
       1. Carrega o `WebhookEndpoint`. Se foi desativado, vai direto para a DLQ com `failureReason = WEBHOOK_ENDPOINT_INACTIVE` (hipótese).
       2. Serializa `payload` e calcula `X-Signature` (seção 5.8).
-      3. Faz `POST` com `fetch` nativo do Node 20 e `AbortSignal.timeout(10000)` (`[09:42] Diego`), sem seguir redirecionamentos (`redirect: 'manual'`, hipótese).
+      3. Faz `POST` com `fetch` nativo do Node 20 (hipótese, sem dependência nova, seguindo `engines` em `package.json`) e `AbortSignal.timeout(10000)` (`[09:42] Diego`), sem seguir redirecionamentos (`redirect: 'manual'`, hipótese).
       4. Grava uma linha em `webhook_deliveries` com status, corpo truncado, duração e `errorCode`.
       5. **Resposta 2xx:** `status = DELIVERED`, `attempts += 1`.
       6. **Qualquer outra resposta, timeout ou erro de rede:** segue para o fluxo de retry (4.3).
@@ -122,7 +122,7 @@ Entry-point `src/worker.ts` (novo), iniciado por `npm run worker` (novo) (`[09:1
 
 **Entrada**
 
-1. Quando o retry se esgota (ou o endpoint está inativo), numa única transação:
+1. Quando o retry se esgota (ou o endpoint está inativo), numa única transação (hipótese, seguindo o uso de `prisma.$transaction` em `src/modules/orders/order.service.ts`):
    1. `webhook_outbox.status = FAILED`.
    2. Cria `WebhookDeadLetter` com `payload`, `failureReason` (último erro), `attempts` e `failedAt` (`[09:18] Diego`).
 2. Loga `webhook_event_dead_lettered` em nível `warn`.
@@ -488,7 +488,7 @@ Cada erro da API é uma subclasse de `AppError` em `src/modules/webhooks/webhook
 | --- | --- | --- | --- |
 | `WEBHOOK_NOT_FOUND` | 404 | `:id` de webhook inexistente em PATCH, DELETE, rotate-secret ou deliveries | `WebhookNotFoundError`; nada é alterado |
 | `WEBHOOK_CUSTOMER_NOT_FOUND` | 404 | `customerId` inexistente em POST ou na listagem | `WebhookCustomerNotFoundError` |
-| `WEBHOOK_INVALID_URL` | 400 | URL inválida ou sem `https` (`[09:23] Sofia`) | Regra no schema Zod, como pedido em `[09:23] Sofia`. Como `src/middlewares/validate.middleware.ts` converte todo `ZodError` em `VALIDATION_ERROR`, a resposta efetiva é `400 VALIDATION_ERROR` com `details[].path = "url"`. Emitir o código `WEBHOOK_INVALID_URL` exigiria checagem no service; decisão pendente na revisão |
+| `WEBHOOK_INVALID_URL` | 400 | URL inválida ou sem `https` (`[09:23] Sofia`) | Regra no schema Zod, como pedido em `[09:23] Sofia`. Como `src/middlewares/validate.middleware.ts` converte todo `ZodError` em `VALIDATION_ERROR`, a resposta efetiva é `400 VALIDATION_ERROR` com `details[].path = "url"`. Emitir o código `WEBHOOK_INVALID_URL` exigiria checagem no service; decisão pendente na revisão (lacuna em [ADR-006](adrs/ADR-006-reuso-dos-padroes-existentes.md), questão 10 do [RFC](RFC.md)) |
 | `WEBHOOK_ROTATION_IN_PROGRESS` | 409 | Rotação pedida com secret anterior ainda válida | `ConflictError` com código próprio |
 | `WEBHOOK_DEAD_LETTER_NOT_FOUND` | 404 | `:id` inexistente no replay | Nada é alterado |
 | `WEBHOOK_DEAD_LETTER_ALREADY_REPLAYED` | 409 | Dead letter com `replayedAt` preenchido | `ConflictError` com código próprio; `details` traz `replayedAt` |
@@ -529,7 +529,7 @@ Cada erro da API é uma subclasse de `AppError` em `src/modules/webhooks/webhook
   - **Crash:** linhas em `PROCESSING` voltam para `PENDING` na inicialização e podem ser reenviadas; o at-least-once cobre essa duplicata.
   - **Restart da API:** não afeta o worker, que é outro processo (`[09:11] Diego`).
   - **Banco indisponível:** o loop loga o erro e tenta de novo no próximo ciclo, sem encerrar o processo (hipótese).
-- **Concorrência entre instâncias:** suportada apenas uma instância (`[09:12] Diego`). A reivindicação com `updateMany ... where status = PENDING` reduz o risco de envio duplo se uma segunda instância subir por engano; a ordenação não é garantida nesse caso.
+- **Concorrência entre instâncias:** suportada apenas uma instância (`[09:12] Diego`). A reivindicação com `updateMany ... where status = PENDING` (hipótese, seção 4.2) reduz o risco de envio duplo se uma segunda instância subir por engano; a ordenação não é garantida nesse caso.
 - **Invariantes:**
   - Nenhuma mudança de status é commitada sem as linhas de outbox correspondentes (`[09:40] Bruno`).
   - Nenhum envio sai sem `X-Signature`.
@@ -647,10 +647,10 @@ O projeto não tem biblioteca de métricas nem de tracing (`package.json`); só 
 | `uuid` | 11.0.3 | Geração do `eventId` |
 
 **Garantias de compatibilidade**
-- Nenhum endpoint existente muda de contrato. A única mudança visível é que `PATCH /api/v1/orders/:id/status` pode responder `422 WEBHOOK_PAYLOAD_TOO_LARGE` ou `500` se a gravação da outbox falhar, porque a outbox participa da transação.
-- A migração só cria tabelas e um enum; não altera colunas existentes. A relação inversa em `Customer` não gera coluna.
-- Sem webhooks cadastrados, `changeStatus` executa uma consulta a mais e nenhum insert.
-- O worker pode ser implantado depois da API: eventos acumulam como `PENDING` e são enviados quando ele subir.
+- Nenhum endpoint existente muda de contrato: as rotas novas ficam em prefixos próprios (`/webhooks`, `/admin/webhooks`) e os routers atuais não são alterados (hipótese, seguindo `src/routes/index.ts`). A única mudança visível é que `PATCH /api/v1/orders/:id/status` pode responder `422 WEBHOOK_PAYLOAD_TOO_LARGE` ou `500` se a gravação da outbox falhar, porque a outbox participa da transação (`[09:40] Bruno`).
+- A migração só cria tabelas e um enum, sem alterar colunas existentes; a relação inversa em `Customer` não gera coluna, como `Customer.orders` hoje (hipótese, seguindo `prisma/schema.prisma`).
+- Sem webhooks cadastrados, `changeStatus` executa uma consulta a mais e nenhum insert (`[09:34] Bruno`).
+- O worker pode ser implantado depois da API: eventos acumulam como `PENDING` na outbox e são enviados quando ele subir (hipótese, decorrente da outbox lida por um worker separado, `[09:06] Diego`).
 
 ---
 

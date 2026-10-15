@@ -35,6 +35,7 @@ Reuso máximo do que já existe; webhooks é um módulo igual aos outros (`[09:3
 Lacunas que a reunião deixou abertas:
 
 - O nome do arquivo de processamento (`webhook.worker.ts` ou `webhook.processor.ts`) ficou em aberto (`[09:28] Bruno`).
+- `src/middlewares/validate.middleware.ts` converte todo `ZodError` em `ValidationError` com código `VALIDATION_ERROR`. Se a recusa de URL `http` ficar no schema Zod, como pediu Sofia (`[09:23] Sofia`), o código `WEBHOOK_INVALID_URL` citado por Bruno (`[09:28] Bruno`) nunca chega ao cliente. A reunião não definiu qual dos dois prevalece; decisão pendente para a revisão do FDD.
 - Marcos disse que "a gente tem usuários que representam o cliente" (`[09:32] Marcos`), mas o schema não liga `User` a `Customer`. Com qualquer papel autenticado podendo gerenciar webhooks de qualquer customer, a reunião não definiu como impedir que um usuário altere webhooks de outro cliente; Sofia indicou que a regra pode ser endurecida "mais pra frente" (`[09:37] Sofia`).
 
 ## Alternativas Consideradas
@@ -48,7 +49,7 @@ Lacunas que a reunião deixou abertas:
 - Respostas de erro no mesmo formato `{ error: { code, message, details } }` das demais rotas, sem tocar no `error.middleware.ts`.
 - Logs com a mesma redação e o mesmo formato do resto do OMS.
 - Curva de aprendizado baixa: quem conhece `orders` ou `customers` reconhece a estrutura do módulo.
-- Nenhuma dependência nova no `package.json`.
+- Nenhuma biblioteca nova de logging, tratamento de erro ou validação (`[09:29] Bruno`).
 
 **Negativas**
 - O módulo herda as limitações atuais: só dois papéis (`ADMIN`, `OPERATOR`) e nenhum vínculo entre usuário e cliente, o que deixa o controle de acesso por customer em aberto.

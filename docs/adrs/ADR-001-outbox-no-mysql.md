@@ -47,7 +47,7 @@ Lacunas que a reunião deixou abertas (a resolver no FDD):
 
 **Positivas**
 - Atomicidade entre mudança de status e evento: não existe status alterado sem evento, nem evento de uma mudança que deu rollback (`[09:06] Diego`).
-- A latência e a disponibilidade dos endpoints dos clientes deixam de afetar `changeStatus`.
+- A latência e a disponibilidade dos endpoints dos clientes deixam de afetar `changeStatus`: um cliente lento não trava mudanças de status de outros pedidos (`[09:04] Bruno`).
 - Nenhuma infraestrutura nova: mesmo MySQL e mesmo Prisma já configurados em `prisma/schema.prisma` e `src/config/database.ts`.
 
 **Negativas**

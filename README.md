@@ -36,7 +36,7 @@ A sequência abaixo foi reconstruída a partir do histórico do git (`git log`) 
    - colunas fixas do Tracker;
    - a ambiguidade conhecida do número de tentativas de retry.
 2. **ADRs primeiro** (`prompts/adrs-generator.md`). Os ADRs são a base dos outros documentos, então vieram antes. O prompt pede um inventário das decisões fechadas na transcrição, com o falante que fechou cada uma, e respeita a classificação da própria reunião. Por exemplo, Sofia disse que o TLS "nem é decisão arquitetural" (`[09:23] Sofia`) e Larissa tratou o limite de 64KB como requisito não funcional (`[09:24] Larissa`), então nenhum dos dois ganhou ADR próprio. Resultado: 7 ADRs, cobrindo as 6 decisões exigidas mais o snapshot do payload, fechado depois do encerramento formal da call (`[09:52] Bruno`).
-3. **RFC** (`prompts/rfc-generator.md`). O RFC consolida a proposta sobre os ADRs, com 8 alternativas descartadas na reunião e as questões em aberto. O prompt separa as questões levantadas na reunião das lacunas encontradas ao escrever os ADRs, e impõe o limite de 700 a 2.600 palavras. O documento final ficou com 2.432.
+3. **RFC** (`prompts/rfc-generator.md`). O RFC consolida a proposta sobre os ADRs, com 8 alternativas descartadas na reunião e as questões em aberto. O prompt separa as questões levantadas na reunião das lacunas encontradas ao escrever os ADRs, e impõe o limite de 700 a 2.600 palavras. O documento ficou com 2.432 palavras na iteração 1 e 2.473 após a revisão da iteração 2.
 4. **FDD** (`prompts/fdd-generator.md`). O FDD desce ao nível de implementação: fluxos numerados, 7 endpoints, matriz de erros `WEBHOOK_*`, resiliência, observabilidade e 18 arquivos existentes na seção de integração. Antes de escrever, li padrões concretos do código: `validate.middleware.ts`, `response.ts`, `customer.controller.ts`, `user.routes.ts` e `tests/setup.ts`. Assim cada hipótese cita o arquivo cujo padrão segue.
 5. **PRD** (`prompts/prd-generator.md`). O PRD veio por último entre os documentos grandes, como consolidação. Traduz as decisões para termos de produto e lista 8 itens fora de escopo, todos com fala de origem.
 6. **Tracker** (`prompts/tracker-generator.md`). Montei o Tracker com os quatro documentos prontos. Um script Python conferiu cada linha:
@@ -46,9 +46,10 @@ A sequência abaixo foi reconstruída a partir do histórico do git (`git log`) 
    - cada caminho existe no repositório;
    - nenhum ID duplicado.
 
-   O Tracker não aceita caminhos marcados como `(novo)` como fonte de código. Resultado: 415 linhas, 99,0% de cobertura, 82,7% de linhas da transcrição e 72 de código.
-7. **README por último.** Este README descreve o processo, então só podia ser escrito depois que todas as etapas anteriores existiam. O prompt `prompts/readme-generator.md` exige reconstruir a jornada a partir de evidências (git, prompts, relatórios) e não de um fluxo idealizado.
-8. **Revisão final** (`prompts/final-review.md`). É uma auditoria somente leitura, critério a critério, com veredito binário. Ela roda depois deste README, porque também avalia o README.
+   O Tracker não aceita caminhos marcados como `(novo)` como fonte de código. Na iteração 1, resultado de 415 linhas, 99,0% de cobertura, 82,7% de linhas da transcrição e 72 de código, com 4 afirmações sem origem.
+7. **README por último.** Este README descreve o processo, então só podia ser escrito depois que todas as etapas anteriores existiam. O prompt `prompts/readme-generator.md` exige reconstruir a jornada a partir de evidências (git, prompts, relatórios) e não de um fluxo idealizado. A iteração 1 foi fechada no commit `8d5d7a3`.
+8. **Iteração 2: os mesmos prompts em modo de revisão.** Rodei de novo a cadeia completa (ADRs, RFC, FDD, PRD, Tracker e este README) sobre os documentos já existentes. Desta vez cada prompt entrou no ramo "documento com conteúdo": releitura integral, comparação com as fontes e com o que as etapas posteriores tinham descoberto, e correção no lugar, sem duplicar seções. Uma mudança num ADR foi propagada para o RFC, o FDD e o PRD na mesma rodada. O Tracker terminou com 425 linhas, 100% de cobertura, 81,6% de linhas da transcrição, 78 de código e nenhum item sem origem.
+9. **Revisão final** (`prompts/final-review.md`). É uma auditoria somente leitura, critério a critério, com veredito binário. Ela roda depois deste README, porque também avalia o README.
 
 A ordem real seguiu a sugerida pelo enunciado. A dependência entre etapas é explícita nos prompts: quando um documento muda, os que dependem dele devem ser regenerados. Uma mudança em ADR, por exemplo, afeta RFC, FDD, PRD, Tracker e README.
 
@@ -105,25 +106,41 @@ Arquivo completo: [`prompts/final-review.md`](prompts/final-review.md). Fecha o 
 
 ## Iterações e ajustes
 
-O histórico do git não registra quantas versões cada prompt teve antes do commit `a3d6b46`; os sete prompts entraram num único commit, e esse número não pode ser reconstruído. Na fase de geração houve **6 ciclos principais**, um por prompt executado (ADRs, RFC, FDD, PRD, Tracker, README). Cada ciclo teve uma geração, uma verificação mecânica e uma rodada de correções. Nenhum documento foi revertido. Os ajustes concretos foram estes:
+O histórico do git não registra quantas versões cada prompt teve antes do commit `a3d6b46`; os sete prompts entraram num único commit, e esse número não pode ser reconstruído. Na produção dos documentos houve **2 iterações principais**:
 
-1. **Paráfrase que exagerava a fala e decisor ausente (ADRs).**
+- **Iteração 1** (commit `8d5d7a3`): seis ciclos, um por prompt (ADRs, RFC, FDD, PRD, Tracker, README), cada um com geração, verificação mecânica e uma rodada de correções.
+- **Iteração 2**: a mesma cadeia em modo de revisão, motivada pelas pendências que a iteração 1 deixou registradas.
+
+Nenhum documento foi revertido. Os ajustes concretos foram estes:
+
+1. **Paráfrase que exagerava a fala e decisor ausente (iteração 1, ADRs).**
    - *Problema:* a primeira versão do ADR-003 dizia que Marcos aceitou que um cliente fora do ar por 15 horas "perca eventos". O ADR-007 listava Sofia entre os decisores do snapshot do payload.
    - *Por que estava errado:* Marcos disse apenas que um cliente fora do ar por 15 horas "já tá com problema sério dele" (`[09:17] Marcos`). Sofia saiu da call às 09:50, antes do snapshot ser decidido (`[09:52] Bruno`).
    - *Correção:* reescrevi a frase com a citação literal. Sofia ficou registrada só como participante da definição do limite de tamanho.
    - *No mesmo ciclo:* uma citação duplicada no ADR-004, e uma menção a `webhook_outbox` no ADR-001 sem o marcador `(nova)`, encontrada pela checagem de arquivos novos sem marcação.
-2. **Tabela inventada no RFC.**
+2. **Tabela inventada no RFC (iteração 1).**
    - *Problema:* a seção de impacto do RFC listava uma "tabela de histórico de entregas" como mudança no schema.
    - *Por que estava errado:* a reunião pediu o histórico (`[09:34] Marcos`), mas nunca disse como ele seria armazenado.
    - *Correção:* a frase passou a dizer que a forma de armazenamento não foi definida e fica para o FDD. No FDD, a tabela `webhook_deliveries` aparece rotulada como hipótese.
-3. **Conflito entre transcrição e código descoberto no FDD.**
+3. **Conflito entre transcrição e código descoberto no FDD (iteração 1).**
    - *Problema:* ao montar a matriz de erros, a leitura de `src/middlewares/validate.middleware.ts` mostrou que todo `ZodError` vira `VALIDATION_ERROR`.
    - *Por que importa:* se a regra https fica no schema Zod, como pediu Sofia (`[09:23] Sofia`), o código `WEBHOOK_INVALID_URL` citado por Bruno (`[09:28] Bruno`) nunca chega ao cliente.
    - *Decisão:* em vez de escolher um lado, o FDD documenta a resposta efetiva (`400 VALIDATION_ERROR`) e marca a decisão como pendente para a revisão. A mesma checagem encontrou o entry-point do worker, um arquivo novo que ainda não existe, citado sem `(novo)` na tabela de integração, e corrigi.
-4. **Afirmações sem origem detectadas pelo Tracker.**
+4. **Afirmações sem origem detectadas pelo Tracker (iterações 1 e 2).**
    - *Problema:* o mapeamento linha a linha encontrou quatro afirmações que soavam como fatos mas eram conclusões de desenho, sem fala nem arquivo que as sustentasse. Três estão na seção 10 do FDD ("nenhum endpoint existente muda de contrato", "a migração só cria tabelas", "o worker pode ser implantado depois da API"). A quarta é um critério de aceite equivalente na seção 11 do PRD.
-   - *Tratamento:* seguindo o prompt, ficaram sem linha, contaram contra a cobertura (99,0% em vez de 100%) e estão listadas em "Itens sem origem" no Tracker.
-   - *Pendente:* rotulá-las como hipótese no FDD e no PRD e rodar o Tracker de novo. Ainda não foi feito.
+   - *Tratamento na iteração 1:* seguindo o prompt, ficaram sem linha, contaram contra a cobertura (99,0% em vez de 100%) e foram listadas em "Itens sem origem" no Tracker.
+   - *Correção na iteração 2:* a revisão do FDD transformou as três garantias em hipóteses ligadas a código, por exemplo "seguindo `src/routes/index.ts`" e "seguindo `prisma/schema.prisma`, como `Customer.orders`", ou em afirmações com citação (`[09:40] Bruno`, `[09:06] Diego`). O critério do PRD foi reescrito. Na nova rodada do Tracker as quatro ganharam linha e a cobertura chegou a 100%.
+5. **Benefício que contradizia a própria lacuna (iteração 2, ADR-004 e PRD).**
+   - *Problema:* o ADR-004 listava entre as consequências positivas que a rotação permite trocar a secret "sem janela de eventos rejeitados". O próprio ADR registra como lacuna que a reunião não definiu com qual secret o worker assina durante as 24 horas. O PRD repetia a promessa ("sem perder notificações").
+   - *Por que estava errado:* o benefício dependia exatamente do ponto em aberto. A transcrição só diz que a antiga "fica válida por 24 horas" para o cliente "ter tempo de migrar" (`[09:21] Sofia`).
+   - *Correção:* o ADR e o PRD passaram a afirmar só o que a fala sustenta, e o ADR deixa explícito que o efeito real depende da lacuna.
+6. **Requisito não funcional que contradizia o FDD (iteração 2, PRD).**
+   - *Problema:* o NFR-11 do PRD prometia "nenhuma quebra de contrato" nas APIs existentes.
+   - *Por que estava errado:* o FDD mostra que `PATCH /api/v1/orders/:id/status` passa a poder falhar quando a gravação da outbox falha, porque a outbox participa da transação (`[09:40] Bruno`). Para o produto essa mudança é relevante: operadores podem ver mudanças de status falharem por causa da feature.
+   - *Correção:* o requisito passou a dizer que as rotas existentes não mudam (hipótese) e a nomear essa única mudança de comportamento.
+7. **Conflito propagado para o lugar certo (iteração 2, ADR-006 e RFC).**
+   - *Problema:* o conflito de `WEBHOOK_INVALID_URL` encontrado no FDD (item 3) só existia no FDD. Ele não aparecia no ADR-006, que lista o código e a validação Zod lado a lado, nem nas questões em aberto do RFC.
+   - *Correção:* a revisão registrou o conflito como lacuna no ADR-006 e como questão 10 no RFC. O FDD passou a apontar para os dois, e o Tracker ganhou as linhas `ADR-006-QA-03` e `RFC-QA-10`.
 
 ## Como navegar a entrega
 

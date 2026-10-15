@@ -14,7 +14,7 @@
 
 - **Problema:** três clientes B2B fazem polling no `GET /orders` para descobrir mudanças de status, o que torna a integração lenta e cara; um deles sinalizou migração para o concorrente se não houver solução até o fim do trimestre (`[09:00] Marcos`).
 - **Proposta:** a cada mudança de status, `OrderService.changeStatus()` grava um evento numa tabela outbox no MySQL **na mesma transação**; um worker em processo separado lê a outbox por polling a cada 2 segundos e envia um POST HTTPS assinado com HMAC-SHA256 para cada endpoint cadastrado pelo cliente, com retry exponencial e DLQ.
-- **Por que assim:** garante que nenhuma mudança de status fica sem evento, sem que um cliente lento trave a transação de pedidos, e sem subir infraestrutura nova para um time pequeno (`[09:07] Diego`).
+- **Por que assim:** garante que nenhuma mudança de status escutada por algum webhook fica sem evento, sem que um cliente lento trave a transação de pedidos, e sem subir infraestrutura nova para um time pequeno (`[09:07] Diego`).
 - **Trade-off principal:** entrega at-least-once com latência de alguns segundos; o cliente precisa deduplicar pelo `X-Event-Id`.
 - **Maior questão em aberto:** o número exato de envios da política de retry (5 no total ou envio inicial mais 5 retentativas), que a reunião deixou contraditório.
 
@@ -50,7 +50,7 @@ flowchart LR
 
 ### Componentes e responsabilidades
 
-1. **Configuração de webhooks** (módulo `src/modules/webhooks/`, a criar). CRUD de endpoints por customer: URL obrigatoriamente `https`, lista de status que o endpoint quer receber, secret gerada pela plataforma e devolvida na criação, estado ativo, rotação de secret e histórico de entregas por endpoint (`[09:31] Marcos`, `[09:33] Bruno`, `[09:34] Marcos`). O `customer_id` vem do body ou do path, não do JWT, porque o JWT identifica o usuário operador e não o cliente (`[09:32] Larissa`).
+1. **Configuração de webhooks** (módulo `src/modules/webhooks/`, a criar). CRUD de endpoints por customer: URL obrigatoriamente `https`, lista de status que o endpoint quer receber, secret gerada pela plataforma e devolvida na criação, estado ativo, rotação de secret e histórico de entregas por endpoint (`[09:31] Marcos`, `[09:33] Bruno`, `[09:21] Sofia`, `[09:34] Marcos`). O `customer_id` vem do body ou do path, não do JWT, porque o JWT identifica o usuário operador e não o cliente (`[09:32] Larissa`).
 
 2. **Publicação do evento** dentro de `changeStatus`. Uma função de publicação no módulo de webhooks (nova) recebe o client da transação corrente, verifica se algum webhook do customer escuta o novo status e, só nesse caso, insere o evento na outbox. Se a inserção falhar, a mudança de status inteira faz rollback (`[09:40] Bruno`, `[09:41] Diego`). O payload é renderizado nesse momento, como snapshot, para refletir o pedido no instante da mudança (`[09:52] Larissa`). Ver [ADR-001](adrs/ADR-001-outbox-no-mysql.md) e [ADR-007](adrs/ADR-007-payload-snapshot-na-insercao.md).
 
@@ -118,6 +118,7 @@ A feature segue os padrões do OMS em vez de introduzir novos (`[09:30] Larissa`
 7. Se o replay da DLQ preserva o `event_id` original, condição para a deduplicação do cliente funcionar ([ADR-005](adrs/ADR-005-entrega-at-least-once-com-x-event-id.md)).
 8. O que acontece com eventos seguintes do mesmo pedido enquanto um evento anterior aguarda retry ([ADR-002](adrs/ADR-002-worker-separado-com-polling.md)).
 9. Se a criação do pedido (`OrderService.create()`, transição `null → PENDING`) também gera evento ([ADR-001](adrs/ADR-001-outbox-no-mysql.md)).
+10. Qual código o cliente recebe ao cadastrar URL `http`. A recusa no schema Zod (`[09:23] Sofia`) passa por `src/middlewares/validate.middleware.ts`, que devolve `VALIDATION_ERROR`, então o `WEBHOOK_INVALID_URL` citado por Bruno (`[09:28] Bruno`) nunca seria emitido ([ADR-006](adrs/ADR-006-reuso-dos-padroes-existentes.md)).
 
 **Fora de escopo por decisão** (não são questões em aberto): notificação por email quando o webhook falha, adiada para uma próxima fase (`[09:37] Larissa`); dashboard visual para o cliente, projeto separado do time de frontend (`[09:40] Larissa`).
 

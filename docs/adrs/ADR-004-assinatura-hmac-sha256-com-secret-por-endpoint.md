@@ -45,7 +45,7 @@ Lacunas que a reunião deixou abertas:
 **Positivas**
 - O cliente consegue verificar origem e integridade de cada entrega com bibliotecas padrão de mercado (`[09:20] Sofia`).
 - O vazamento de uma secret afeta apenas um endpoint.
-- A rotação com grace period permite trocar a secret sem janela de eventos rejeitados pelo cliente.
+- A rotação dá ao cliente 24 horas para migrar os sistemas dele para a nova secret (`[09:21] Sofia`). Se isso evita eventos rejeitados durante a troca depende da lacuna sobre qual secret assina nesse período.
 
 **Negativas**
 - O worker precisa ler a secret em texto recuperável, o que aumenta a superfície de exposição no banco e nos logs.
